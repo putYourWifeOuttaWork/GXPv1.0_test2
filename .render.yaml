@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: gxp-uploader
+    name: gxp-worker
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
@@ -19,3 +19,5 @@ services:
         sync: false
       - key: SUPABASE_BUCKET
         value: petri-images
+      - key: DISK_PATH
+        value: /mnt/data
