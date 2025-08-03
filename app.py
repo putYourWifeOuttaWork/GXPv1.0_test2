@@ -1,5 +1,5 @@
 import os, json
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 import paho.mqtt.client as mqtt
@@ -53,7 +53,7 @@ def upload_image_and_insert():
         "image_id": image_id,
         "image_url": public_url,
         "chunk_status": "complete",
-        "submitted_at": datetime.utcnow().isoformat(),
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
         "raw_payload": {}  # Extend as needed later
     }).execute()
     print("[✔] Image uploaded and DB record inserted:", result)
@@ -73,7 +73,7 @@ def on_message(client, userdata, msg):
     if msg.topic == INFO_TOPIC:
         meta = json.loads(msg.payload.decode())
         expected_chunks = meta["total_chunks"]
-        image_id = meta.get("image_id", f"img-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}")
+        image_id = meta.get("image_id", f"img-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
         received_data.clear()
         print(f"Expecting {expected_chunks} chunks for {image_id}")
 
