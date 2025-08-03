@@ -5,8 +5,8 @@ from collections import defaultdict
 import paho.mqtt.client as mqtt
 from supabase import create_client, Client
 
-print("✅ GXP Worker has started.")
-raise Exception("🔥 TEST LOG LINE")
+print(" GXP Worker has started.")
+raise Exception("TEST LOG LINE")
 
 # --- ENV VARS ---
 MQTT_BROKER = os.getenv("MQTT_BROKER")
@@ -59,7 +59,7 @@ def upload_image_and_insert():
     os.remove(filepath)
 
 def on_connect(client, userdata, flags, rc):
-    print("🚀 on_connect called!")
+    print(" on_connect called!")
     print(f"→ MQTT connection result code: {rc}")
     client.subscribe([(INFO_TOPIC, 0), (CHUNK_TOPIC, 0)])
 
@@ -104,4 +104,4 @@ try:
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()
 except Exception as e:
-    print(f"❌ MQTT connection error: {e}")
+    print(f" MQTT connection error: {e}")
