@@ -5,6 +5,8 @@ from collections import defaultdict
 import paho.mqtt.client as mqtt
 from supabase import create_client, Client
 
+print("✅ GXP Worker has started.")
+
 # --- ENV VARS ---
 MQTT_BROKER = os.getenv("MQTT_BROKER")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "8883"))
@@ -24,11 +26,9 @@ expected_chunks = None
 received_data = {}
 image_id = None
 
-
 def upload_image_and_insert():
     global image_id, received_data
 
-    # Save reassembled image to SSD
     filepath = os.path.join(DISK_PATH, f"{image_id}.jpg")
     with open(filepath, "wb") as f:
         for i in range(expected_chunks):
@@ -38,37 +38,33 @@ def upload_image_and_insert():
             f.write(received_data[i])
     print(f"[+] Image written to {filepath}")
 
-    # Upload to Supabase
     with open(filepath, "rb") as img_file:
         supabase.storage.from_(SUPABASE_BUCKET).upload(f"{image_id}.jpg", img_file, {
             "content-type": "image/jpeg"
         })
 
-    # Image URL
     public_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{image_id}.jpg"
 
-    # Insert metadata
     result = supabase.table("gxp_raw_observations").insert({
         "gxp_id": "dev-default",
         "image_id": image_id,
         "image_url": public_url,
         "chunk_status": "complete",
         "submitted_at": datetime.now(timezone.utc).isoformat(),
-        "raw_payload": {}  # Extend as needed later
+        "raw_payload": {}
     }).execute()
     print("[✔] Image uploaded and DB record inserted:", result)
 
-    # Cleanup file
     os.remove(filepath)
 
-
 def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT broker")
+    print("🚀 on_connect called!")
+    print(f"→ MQTT connection result code: {rc}")
     client.subscribe([(INFO_TOPIC, 0), (CHUNK_TOPIC, 0)])
-
 
 def on_message(client, userdata, msg):
     global expected_chunks, received_data, image_id
+    print(f"[DEBUG] Message received on topic {msg.topic}, length {len(msg.payload)}")
 
     if msg.topic == INFO_TOPIC:
         meta = json.loads(msg.payload.decode())
@@ -95,14 +91,16 @@ def on_message(client, userdata, msg):
             received_data[chunk_num] = data
             print(f"Chunk {chunk_num} received ({len(data)} bytes)")
 
+try:
+    client = mqtt.Client()
+    client.tls_set(cert_reqs=None)
+    client.tls_insecure_set(True)
+    client.username_pw_set(MQTT_USER, MQTT_PASS)
+    client.on_connect = on_connect
+    client.on_message = on_message
 
-client = mqtt.Client()
-client.tls_set(cert_reqs=None)
-client.tls_insecure_set(True)
-client.username_pw_set(MQTT_USER, MQTT_PASS)
-client.on_connect = on_connect
-client.on_message = on_message
-
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
-print("[MQTT] Connecting and listening...")
-client.loop_forever()
+    print("[MQTT] Connecting and listening...")
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_forever()
+except Exception as e:
+    print(f"❌ MQTT connection error: {e}")
