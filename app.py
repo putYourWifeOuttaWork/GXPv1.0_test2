@@ -6,7 +6,6 @@ import paho.mqtt.client as mqtt
 from supabase import create_client, Client
 
 print(" GXP Worker has started.")
-raise Exception("TEST LOG LINE")
 
 # --- ENV VARS ---
 MQTT_BROKER = os.getenv("MQTT_BROKER")
